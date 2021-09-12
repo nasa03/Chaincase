@@ -17,5 +17,15 @@ namespace Chaincase.Common.Services.Mock
         {
             return Task.CompletedTask;
         }
+
+        public string CreateHiddenServiceAsync()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void DestroyHiddenServiceAsync(string serviceId)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

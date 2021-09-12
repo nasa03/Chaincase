@@ -13,6 +13,8 @@ using WalletWasabi.Exceptions;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 using WalletWasabi.TorSocks5;
+using System.Threading;
+
 
 namespace Chaincase.iOS.Services
 {
@@ -289,6 +291,42 @@ namespace Chaincase.iOS.Services
         {
             initRetry?.Cancel();
             initRetry = null;
+        }
+
+        public string CreateHiddenServiceAsync()
+        {
+
+            EventWaitHandle ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            string serviceId = "";
+            TorController.SendCommand(new NSString("ADD_ONION"),
+                new string[] { "NEW:BEST", "Port=37129,37129", "Flags=DiscardPK" },
+                null, (keys, values, _) => {
+
+                    var keyValuePair = values[0].ToString().Split('=');
+                    if (keyValuePair.Length < 2)
+                    {
+                        ewh.Set();
+                        return false;
+                    }
+                    serviceId = keyValuePair[1];
+                    ewh.Set();
+                    return true;
+                });
+            ewh.WaitOne();
+            return serviceId;
+        }
+
+        public void DestroyHiddenServiceAsync(string serviceId)
+        {
+            EventWaitHandle ewh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            TorController.SendCommand(new NSString("DEL_ONION"),
+                new string[] { $"{serviceId}" }, null,
+                (keys, values, _) =>
+                {
+                    ewh.Set();
+                    return true;
+                });
+            ewh.WaitOne();
         }
     }
 }
