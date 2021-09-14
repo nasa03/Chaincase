@@ -24,6 +24,7 @@ namespace Chaincase.UI.ViewModels
         private readonly UiConfig _uiConfig;
         private readonly ChaincaseWalletManager _walletManager;
         private readonly BitcoinStore _bitcoinStore;
+        private readonly P2EPServer _P2EPServer;
         private SmartHeaderChain HashChain => _bitcoinStore.SmartHeaderChain;
         private readonly ChaincaseSynchronizer _synchronizer;
         private CompositeDisposable Disposables { get; } = new CompositeDisposable();
@@ -46,7 +47,7 @@ namespace Chaincase.UI.ViewModels
         private bool _downloadingBlock;
         private StatusSet ActiveStatuses { get; }
 
-        public StatusViewModel(Global global, ChaincaseWalletManager walletManager, Config config, UiConfig uiConfig, BitcoinStore bitcoinStore, ChaincaseSynchronizer synchronizer)
+        public StatusViewModel(Global global, ChaincaseWalletManager walletManager, Config config, UiConfig uiConfig, BitcoinStore bitcoinStore, ChaincaseSynchronizer synchronizer, P2EPServer P2EPServer)
         {
             _global = global;
             _walletManager = walletManager;
@@ -54,6 +55,7 @@ namespace Chaincase.UI.ViewModels
             _Config = config;
             _uiConfig = uiConfig;
             _synchronizer = synchronizer;
+            _P2EPServer = P2EPServer;
             Backend = BackendStatus.NotConnected;
             Tor = TorStatus.NotRunning;
             Peers = 0;
@@ -254,6 +256,10 @@ namespace Chaincase.UI.ViewModels
         {
             get => _tor;
             set => this.RaiseAndSetIfChanged(ref _tor, value);
+        }
+
+        public Boolean IsTorHiddenServiceActive {
+            get => _P2EPServer.HiddenServiceIsOn;
         }
 
         public int Peers

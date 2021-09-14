@@ -13,6 +13,9 @@
         <IonLabel>Tor Status: @TorLabel()</IonLabel>
     </IonItem>
     <IonItem>
+        <IonLabel>Tor Hidden Service Status: @TorHiddenServiceStatus()</IonLabel>
+    </IonItem>
+    <IonItem>
         @if (ViewModel.FiltersLeft == 0)
         {
             <IonLabel>Your wallet is sync'd</IonLabel>
@@ -25,7 +28,7 @@
     @if (ViewModel.ProgressPercent != 100)
     {
         <IonItem>
-            <IonProgressBar value="@ViewModel.ProgressPercent"/>
+            <IonProgressBar value="@ViewModel.ProgressPercent" />
         </IonItem>
     }
 
@@ -61,5 +64,9 @@
             default:
                 return "⌛";
         }
+    }
+
+    public string TorHiddenServiceStatus() {
+        return ViewModel.IsTorHiddenServiceActive ? "✅" : "📴";
     }
 }

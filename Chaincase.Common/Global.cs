@@ -35,6 +35,7 @@ namespace Chaincase.Common
         private readonly ChaincaseWalletManager _walletManager;
         private readonly ITorManager _torManager;
         private readonly IDataDirProvider _dataDirProvider;
+        private readonly P2EPServer _P2EPServer;
         private string DataDir => _dataDirProvider.Get();
         private CoinJoinProcessor _coinJoinProcessor;
         private readonly ChaincaseSynchronizer _synchronizer;
@@ -69,7 +70,8 @@ namespace Chaincase.Common
             ChaincaseWalletManager walletManager,
             BitcoinStore bitcoinStore,
             ChaincaseSynchronizer synchronizer,
-            FeeProviders feeProviders
+            FeeProviders feeProviders,
+            P2EPServer P2EPServer
             )
         {
             _torManager = torManager;
@@ -80,6 +82,7 @@ namespace Chaincase.Common
             _bitcoinStore = bitcoinStore;
             _synchronizer = synchronizer;
             _feeProviders = feeProviders;
+            _P2EPServer = P2EPServer;
             using (BenchmarkLogger.Measure())
             {
                 StoppingCts = new CancellationTokenSource();
@@ -228,6 +231,11 @@ namespace Chaincase.Common
                 #endregion Blocks provider
 
                 _walletManager.RegisterServices(_bitcoinStore, _synchronizer, Nodes, _config.ServiceConfiguration, _feeProviders, blockProvider);
+
+                if (!_P2EPServer.HiddenServiceIsOn) {
+                    var cts = new CancellationToken();
+                    await _P2EPServer.StartAsync(cts);
+                }
 
                 Initialized(this, new AppInitializedEventArgs(this));
                 IsInitialized = true;
@@ -480,6 +488,20 @@ namespace Chaincase.Common
                     }
 
                     IsGoingToSleep = false;
+
+                    if (_P2EPServer.HiddenServiceIsOn)
+                    {
+                        //KeepHiddenServiceAlive.Dispose();
+                        //KeepHiddenServiceAlive = new CancellationTokenSource();
+                        //// wait 20 seconds
+                        //for (int i = 0; i < 20; i++)
+                        //{
+                        //    await Task.Delay(1_000); //
+                        //    if (KeepHiddenServiceAlive.IsCancellationRequested || !P2EPServer.HiddenServiceIsOn) return;
+                        //}
+                        await _P2EPServer.StopAsync(SleepCts.Token);
+                    }
+
                     #endregion CriticalSection
                 }
             }

@@ -19,6 +19,11 @@ namespace Chaincase.Common
             services.AddSingleton<Global>();
             services.AddSingleton<Config>();
             services.AddSingleton<UiConfig>();
+            services.AddSingleton(services =>
+            {
+                var torManger = services.GetRequiredService<ITorManager>();
+                return new P2EPServer(torManger);
+            });
             services.AddScoped<SensitiveStorage>();
             services.AddSingleton(x => {
                 var network = x.GetRequiredService<Config>().Network;

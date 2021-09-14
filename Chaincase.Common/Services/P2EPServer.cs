@@ -19,16 +19,14 @@ namespace Chaincase.Common.Services
 
 		private HttpListener Listener { get; }
 		public string ServiceId { get; private set; }
-		public Global Global { get; }
 		private readonly int _paymentEndpointPort = 37129;
 		public string PaymentEndpoint => $"http://{ServiceId}.onion:${_paymentEndpointPort}";
 		public bool HiddenServiceIsOn { get; private set; }
 
 		public string Password { private get; set; }
 
-		public P2EPServer(Global global, ITorManager TorManager)
+		public P2EPServer(ITorManager TorManager)
 		{
-			Global = global;
 			Listener = new HttpListener();
 			Listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
 			Listener.Prefixes.Add($"http://*:{_paymentEndpointPort}/");
