@@ -20,7 +20,7 @@ namespace Chaincase.Common.Services
 		private HttpListener Listener { get; }
 		public string ServiceId { get; private set; }
 		private readonly int _paymentEndpointPort = 37129;
-		public string PaymentEndpoint => $"http://{ServiceId}.onion:${_paymentEndpointPort}";
+		public string PaymentEndpoint => $"http://{ServiceId}.onion:{_paymentEndpointPort}";
 		public bool HiddenServiceIsOn { get; private set; }
 
 		public string Password { private get; set; }

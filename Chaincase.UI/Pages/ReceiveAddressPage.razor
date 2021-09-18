@@ -4,29 +4,65 @@
 @inject UIStateService UiStateService
 @inject NavigationManager NavigationManager
 @inject ReceiveViewModel ReceiveViewModel
-@inject IClipboard Clipboard 
+@inject IClipboard Clipboard
 @inject IShare Share
 @inherits ReactiveComponentBase<ReceiveViewModel>
 
 <IonContent>
     <div class="ion-padding center-and-expand-vertical">
         <div>
-            <div style="width: 256px; height: 256px; margin: auto">
-                <QRCode Data="@ViewModel.BitcoinUri"></QRCode>
-            </div>
-            <IonText class="ion-text-center" @onclick="@(async () => await CopyToClipboardAsync(ViewModel.Address))">
-                <p>@ViewModel.Address</p>
-            </IonText>
-            <div style="display:flex; justify-content: center;">
-                <IonChip @onclick="@(async () => await CopyToClipboardAsync(ViewModel.BitcoinUri))" color="primary">
-                    <ion-icon name="copy-outline"></ion-icon>
-                    <IonLabel>Copy</IonLabel>
-                </IonChip>
-                <IonChip @onclick="ShareLink" color="primary">
-                    <ion-icon name="share-outline"></ion-icon>
-                    <IonLabel>Share</IonLabel>
-                </IonChip>
-            </div>
+            <IonSegment class="ion-padding" @bind-Value="ReceiveSegment" @onclick="HandleReceiveSegmentClick" mode="ios" color="primary">
+                <IonSegmentButton value="@SIMPLE">
+                    <IonLabel>Simple</IonLabel>
+                </IonSegmentButton>
+                <IonSegmentButton value="@PAYJOIN" layout="icon-start">
+                    <IonIcon name="shuffle"></IonIcon>
+                    <IonLabel>PayJoin</IonLabel>
+                </IonSegmentButton>
+            </IonSegment>
+            @if (ReceiveSegment == PAYJOIN && @ViewModel.IsPayjoinLive)
+            {
+                <p class="ion-padding recieve-wrapper" style="width: 256px; height: 256px; margin: auto">
+                    <QRCode Data="@ViewModel.P2EPUri"></QRCode>
+                </p>
+
+                <div class="ion-padding">
+                    <IonLabel class="ion-padding">
+                        <p class="ion-text-center">
+                            @ViewModel.P2EPUri
+                        </p>
+                    </IonLabel>
+                </div>
+                <div style="display:flex; justify-content: center;">
+                    <IonChip @onclick="@(async () => await CopyToClipboardAsync(ViewModel.P2EPUri))" color="primary">
+                        <ion-icon name="copy-outline"></ion-icon>
+                        <IonLabel>Copy</IonLabel>
+                    </IonChip>
+                    <IonChip @onclick="@(() => ShareLink(ViewModel.P2EPUri))" color="primary">
+                        <ion-icon name="share-outline"></ion-icon>
+                        <IonLabel>Share</IonLabel>
+                    </IonChip>
+                </div>
+            }
+            else
+            {
+                <div style="width: 256px; height: 256px; margin: auto">
+                    <QRCode Data="@ViewModel.BitcoinUri"></QRCode>
+                </div>
+                <IonText class="ion-text-center" @onclick="@(async () => await CopyToClipboardAsync(ViewModel.Address))">
+                    <p>@ViewModel.Address</p>
+                </IonText>
+                <div style="display:flex; justify-content: center;">
+                    <IonChip @onclick="@(async () => await CopyToClipboardAsync(ViewModel.BitcoinUri))" color="primary">
+                        <ion-icon name="copy-outline"></ion-icon>
+                        <IonLabel>Copy</IonLabel>
+                    </IonChip>
+                    <IonChip @onclick="@(() => ShareLink(ViewModel.BitcoinUri))" color="primary">
+                        <ion-icon name="share-outline"></ion-icon>
+                        <IonLabel>Share</IonLabel>
+                    </IonChip>
+                </div>
+            }
         </div>
     </div>
 
@@ -50,8 +86,47 @@
     <IonButton class="neu-button" href="/overview" expand="block">DONE</IonButton>
 </IonFooter>
 
+
+<IonModal @bind-Visible="IsPasswordModalVisible">
+    <IonHeader>
+        <IonToolbar>
+            <IonTitle>Approve PayJoin</IonTitle>
+            <IonButtons slot="start">
+                <IonButton @onclick="@DontTryPayJoin">Back</IonButton>
+            </IonButtons>
+        </IonToolbar>
+    </IonHeader>
+    <IonContent class="ion-padding">
+        <IonLabel position="stacked">Enter Password</IonLabel>
+        <div class="@(IsShaking ? "shake" : "")">
+            <IonItem>
+                <IonPasswordInput @bind-Value="Password" placeholder="e.g. margaretthatcheris110%SEXY" />
+            </IonItem>
+        </div>
+        <IonCard color="primary">
+            <IonCardContent>
+                <strong>Info:</strong> PayJoin requires your approval to collaborate on the transaction.
+            </IonCardContent>
+        </IonCard>
+        <IonCard color="warning">
+            <IonCardContent>
+                <strong>Warning:</strong> The app must be open to receive a PayJoin because it collaborates with the sender.
+            </IonCardContent>
+        </IonCard>
+        <IonButton @onclick="TryPayJoin" color="primary" expand="block">Get PayJoin Invoice</IonButton>
+        <IonLoading Visible="@ViewModel.IsBusy"></IonLoading>
+    </IonContent>
+</IonModal>
+
 @code {
     private bool IsToastVisible;
+    private const string SIMPLE = "simple";
+    private const string PAYJOIN = "pj";
+    private string ReceiveSegment = SIMPLE;
+    private bool IsShaking;
+    private bool IsPasswordModalVisible;
+    private bool IsPayJoinApproved;
+    private string Password;
 
     protected override void OnInitialized()
     {
@@ -59,13 +134,53 @@
         UiStateService.Title = "RECEIVE";
     }
 
-    private async Task ShareLink() {
-        await Share.ShareText(ViewModel.BitcoinUri);
+    private void HandleReceiveSegmentClick()
+    {
+        if (ReceiveSegment == PAYJOIN && !ViewModel.IsPayjoinLive)
+        {
+            ToggleModal();
+        }
+    }
+
+    private async Task ShareLink(string toShare)
+    {
+        await Share.ShareText(toShare);
     }
 
     private async Task CopyToClipboardAsync(string toCopy)
     {
         await Clipboard.Copy(toCopy);
         IsToastVisible = true;
+    }
+
+    private void ToggleModal() => IsPasswordModalVisible = !IsPasswordModalVisible;
+
+    private async Task TryPayJoin()
+    {
+        try
+        {
+            IsShaking = false;
+            await ViewModel.TryStartPayjoin(Password);
+            ToggleModal();
+        }
+        catch (Exception ex)
+        {
+            IsShaking = true;
+        }
+        finally
+        {
+            Password = "";
+        }
+    }
+
+    private async Task ShareP2EPLink()
+    {
+        await Share.ShareText(ViewModel.P2EPUri);
+    }
+
+    private void DontTryPayJoin()
+    {
+        IsPasswordModalVisible = false;
+        ReceiveSegment = SIMPLE;
     }
 }
